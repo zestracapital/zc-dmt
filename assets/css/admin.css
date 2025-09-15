@@ -1,0 +1,365 @@
+/**
+ * ZC DMT Admin Styles
+ */
+
+/* Dashboard Widgets */
+.zc-dashboard-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.zc-stat-card {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.zc-stat-value {
+    font-size: 2em;
+    font-weight: bold;
+    color: #0073aa;
+    margin-bottom: 5px;
+}
+
+.zc-stat-label {
+    font-size: 0.9em;
+    color: #666;
+}
+
+/* Form Sections */
+.zc-form-section {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.zc-form-section h2 {
+    margin-top: 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+/* Formula Builder */
+.zc-formula-builder {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 20px;
+}
+
+.zc-functions-panel {
+    border-right: 1px solid #eee;
+    padding-right: 20px;
+}
+
+.zc-function-categories h4 {
+    margin: 15px 0 5px 0;
+}
+
+.zc-function-categories ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 15px 0;
+}
+
+.zc-function-categories li {
+    margin-bottom: 5px;
+}
+
+.zc-function-categories button {
+    text-align: left;
+    width: 100%;
+    margin-bottom: 5px;
+}
+
+.zc-indicators-list ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.zc-indicators-list li {
+    margin-bottom: 5px;
+}
+
+.zc-indicators-list button {
+    text-align: left;
+    width: 100%;
+}
+
+/* Log Levels */
+.zc-log-level {
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.zc-log-level-info {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.zc-log-level-warning {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.zc-log-level-error {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.zc-log-level-critical {
+    background: #f5c6cb;
+    color: #721c24;
+}
+
+/* Status Indicators */
+.zc-status-active {
+    color: #00a32a;
+    font-weight: bold;
+}
+
+.zc-status-inactive {
+    color: #d63638;
+    font-weight: bold;
+}
+
+/* Import Progress */
+.zc-import-progress {
+    margin-top: 20px;
+}
+
+.zc-progress-bar {
+    width: 100%;
+    height: 20px;
+    background: #f1f1f1;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+
+.zc-progress-fill {
+    height: 100%;
+    background: #0073aa;
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+/* Tabs */
+.zc-tabs-nav {
+    margin: 0 0 20px;
+    padding: 0;
+    list-style: none;
+    border-bottom: 1px solid #ccc;
+}
+
+.zc-tabs-nav .nav-tab {
+    border: 1px solid #ccc;
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    background: #f1f1f1;
+    margin-bottom: -1px;
+    padding: 8px 12px;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.zc-tabs-nav .nav-tab.nav-tab-active {
+    background: #fff;
+    border-bottom: 1px solid #fff;
+    color: #000;
+}
+
+.zc-tab-content {
+    display: none;
+}
+
+.zc-tab-content:first-child {
+    display: block;
+}
+
+/* Quick Actions */
+.zc-quick-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.zc-quick-actions .button {
+    margin-right: 10px;
+    margin-bottom: 10px;
+}
+
+/* Source Types Grid */
+.zc-source-types-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.zc-source-type-card {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    background: #f9f9f9;
+}
+
+.zc-source-type-card h3 {
+    margin-top: 0;
+    color: #333;
+}
+
+.zc-source-type-card ul {
+    list-style: disc;
+    padding-left: 20px;
+}
+
+/* Chart Preview */
+.zc-chart-preview-container {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.zc-chart-preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+/* Delete Confirmation */
+.zc-delete-confirmation {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-left: 4px solid #d63638;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+/* Backup History */
+.zc-backup-history-section {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+/* Data Points */
+.zc-data-points-section {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+/* Navigation */
+.zc-dmt-navigation {
+    background: #f1f1f1;
+    border-bottom: 1px solid #ddd;
+    margin: 20px 0;
+}
+
+.zc-dmt-menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+}
+
+.zc-dmt-menu-item {
+    margin: 0;
+}
+
+.zc-dmt-menu-item a {
+    display: block;
+    padding: 12px 15px;
+    text-decoration: none;
+    color: #555;
+    border-right: 1px solid #ddd;
+}
+
+.zc-dmt-menu-item a:hover {
+    background: #ddd;
+    color: #000;
+}
+
+.zc-dmt-menu-item.active a {
+    background: #0073aa;
+    color: #fff;
+}
+
+/* Header */
+.zc-dmt-admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 20px 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+.zc-dmt-version {
+    font-size: 0.7em;
+    color: #666;
+    margin-left: 10px;
+}
+
+/* Footer */
+.zc-dmt-admin-footer {
+    margin: 30px 0 20px 0;
+    padding-top: 10px;
+    border-top: 1px solid #ddd;
+    text-align: center;
+    color: #666;
+    font-size: 0.9em;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .zc-dashboard-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .zc-formula-builder {
+        grid-template-columns: 1fr;
+    }
+    
+    .zc-functions-panel {
+        border-right: none;
+        border-bottom: 1px solid #eee;
+        padding-right: 0;
+        padding-bottom: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .zc-dmt-menu {
+        flex-direction: column;
+    }
+    
+    .zc-dmt-menu-item a {
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    .zc-dmt-admin-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .zc-dmt-header-actions {
+        margin-top: 10px;
+    }
+}
