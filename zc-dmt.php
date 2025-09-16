@@ -51,12 +51,12 @@ class ZC_DMT {
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
         
         // Handle AJAX requests for Data Sources page
-        add_action('wp_ajax_zc_dmt_get_source_config', array($this, 'ajax_get_source_config'));
+        add_action('wp-ajax_zc_dmt_get_source_config', array($this, 'ajax_get_source_config'));
 		// If you want non-logged-in users to potentially access this (unlikely for admin), you'd use:
-		// add_action('wp_ajax_nopriv_zc_dmt_get_source_config', array($this, 'ajax_get_source_config')); 
+		// add_action('wp-ajax_nopriv_zc_dmt_get_source_config', array($this, 'ajax_get_source_config')); 
 
         // Handle form submission via AJAX from data-sources.php page
-        add_action('wp_ajax_zc_dmt_add_source_from_data_sources_page', array($this, 'ajax_add_source_from_data_sources_page'));
+        add_action('wp-ajax_zc_dmt_add_source_from_data_sources_page', array($this, 'ajax_add_source_from_data_sources_page'));
 
         // --- Potentially add REST API endpoints here or in a dedicated class ---
         // The current code adds one endpoint, but the guide suggests a full REST API class.
@@ -66,11 +66,11 @@ class ZC_DMT {
     // --- Add this method for the new AJAX handler ---
     /**
      * Handles the AJAX request from data-sources.php to get the configuration form for a selected source type.
-     * Action: wp_ajax_zc_dmt_get_source_config
+     * Action: wp-ajax_zc_dmt_get_source_config
      */
     public function ajax_get_source_config() {
         // Check nonce for security
-        check_ajax_referer('zc_dmt_get_source_config_nonce', 'nonce');
+        check-ajax_referer('zc_dmt_get_source_config_nonce', 'nonce');
 
         // Check user capabilities
         if (!current_user_can('manage_options')) {
@@ -112,25 +112,25 @@ class ZC_DMT {
         echo '<table class="form-table">';
 
         echo '<tr>';
-        echo '<th scope="row"><label for="source_name_ajax">' . __('Name', 'zc-dmt') . '</label></th>';
+        echo '<th scope="row"><label for="source_name-ajax">' . __('Name', 'zc-dmt') . '</label></th>';
         echo '<td>';
-        echo '<input type="text" name="source_name" id="source_name_ajax" value="" class="regular-text" required>';
+        echo '<input type="text" name="source_name" id="source_name-ajax" value="" class="regular-text" required>';
         echo '<p class="description">' . __('Enter a descriptive name for this data source.', 'zc-dmt') . '</p>';
         echo '</td>';
         echo '</tr>';
 
         echo '<tr>';
-        echo '<th scope="row"><label for="source_slug_ajax">' . __('Slug', 'zc-dmt') . '</label></th>';
+        echo '<th scope="row"><label for="source_slug-ajax">' . __('Slug', 'zc-dmt') . '</label></th>';
         echo '<td>';
-        echo '<input type="text" name="source_slug" id="source_slug_ajax" value="" class="regular-text">';
+        echo '<input type="text" name="source_slug" id="source_slug-ajax" value="" class="regular-text">';
         echo '<p class="description">' . __('A unique identifier for this data source.', 'zc-dmt') . '</p>';
         echo '</td>';
         echo '</tr>';
 
         echo '<tr>';
-        echo '<th scope="row"><label for="source_description_ajax">' . __('Description', 'zc-dmt') . '</label></th>';
+        echo '<th scope="row"><label for="source_description-ajax">' . __('Description', 'zc-dmt') . '</label></th>';
         echo '<td>';
-        echo '<textarea name="source_description" id="source_description_ajax" class="large-text" rows="3"></textarea>';
+        echo '<textarea name="source_description" id="source_description-ajax" class="large-text" rows="3"></textarea>';
         echo '<p class="description">' . __('A brief description of this data source.', 'zc-dmt') . '</p>';
         echo '</td>';
         echo '</tr>';
@@ -139,7 +139,7 @@ class ZC_DMT {
         echo '<th scope="row">' . __('Active', 'zc-dmt') . '</th>';
         echo '<td>';
         echo '<label>';
-        echo '<input type="checkbox" name="source_active" id="source_active_ajax" value="1" checked>';
+        echo '<input type="checkbox" name="source_active" id="source_active-ajax" value="1" checked>';
         echo ' ' . __('Enable this data source', 'zc-dmt');
         echo '</label>';
         echo '<p class="description">' . __('Uncheck to disable this data source without deleting it.', 'zc-dmt') . '</p>';
@@ -183,15 +183,15 @@ class ZC_DMT {
         (function($) {
             // Re-attach the auto-generate slug listener for dynamically loaded forms
             // Use unique IDs to avoid conflicts if multiple instances could exist (unlikely here)
-            $('#source_name_ajax').off('blur.zc_dmt_ajax').on('blur.zc_dmt_ajax', function() {
+            $('#source_name-ajax').off('blur.zc_dmt-ajax').on('blur.zc_dmt-ajax', function() {
                 var name = $(this).val();
                 var slug = name.toLowerCase()
                                .replace(/[^a-z0-9\s-]/g, '')
                                .replace(/\s+/g, '-')
                                .replace(/-+/g, '-')
                                .trim('-');
-                if (!$('#source_slug_ajax').val()) {
-                    $('#source_slug_ajax').val(slug);
+                if (!$('#source_slug-ajax').val()) {
+                    $('#source_slug-ajax').val(slug);
                 }
             });
         })(jQuery);
@@ -210,11 +210,11 @@ class ZC_DMT {
     // --- Add this method for handling the AJAX form submission from data-sources.php ---
     /**
      * Handles the AJAX form submission from the dynamic form on data-sources.php.
-     * Action: wp_ajax_zc_dmt_add_source_from_data_sources_page
+     * Action: wp-ajax_zc_dmt_add_source_from_data_sources_page
      */
     public function ajax_add_source_from_data_sources_page() {
         // Check nonce for security
-        check_ajax_referer('zc_dmt_add_source_nonce', 'nonce'); // Use the same nonce as add-source.php
+        check-ajax_referer('zc_dmt_add_source_nonce', 'nonce'); // Use the same nonce as add-source.php
 
         // Check user capabilities
         if (!current_user_can('manage_options')) {
@@ -224,7 +224,7 @@ class ZC_DMT {
         // --- Replicate logic from add-source.php form processing ---
         // Get data from POST (sent via AJAX serialize)
         $source_type = isset($_POST['source_type']) ? sanitize_key($_POST['source_type']) : '';
-        // Verify nonce (already checked above via check_ajax_referer, but form also sends it)
+        // Verify nonce (already checked above via check-ajax_referer, but form also sends it)
         $nonce = isset($_POST['zc_dmt_add_source_nonce']) ? $_POST['zc_dmt_add_source_nonce'] : '';
 
         if ( empty($source_type) || !wp_verify_nonce($nonce, 'zc_dmt_add_source') ) {
