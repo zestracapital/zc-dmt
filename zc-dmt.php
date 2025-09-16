@@ -47,9 +47,6 @@ class ZC_DMT {
         // Register admin menu
         add_action('admin_menu', array($this, 'register_admin_menu'));
         
-        // Handle loading of admin pages
-        add_action('admin_init', array($this, 'handle_admin_pages'));
-
         // Enqueue admin scripts and styles
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
         
@@ -65,68 +62,6 @@ class ZC_DMT {
         // The current code adds one endpoint, but the guide suggests a full REST API class.
         // add_action('rest_api_init', array($this, 'register_rest_routes')); // Example if using a method in this class
     }
-
-    /**
-     * Handles all admin page requests by checking capabilities and including the correct file.
-     * This fixes the "You are not allowed to access this page" errors and potential admin bar conflicts.
-     */
-    public function handle_admin_pages() {
-        // Get the current page slug from the query
-        $page = isset($_GET['page']) ? sanitize_key($_GET['page']) : '';
-
-        // Define an array of valid page slugs and their corresponding files
-        // This list should match the files you have in your /admin directory
-        $pages = array(
-            // Main pages from the menu
-            'zc-dmt-dashboard' => 'dashboard.php',
-            // 'zc-dmt-api-management' => 'api-management.php', // Uncomment if this file exists
-            'zc-dmt-data-sources' => 'data-sources.php',
-            'zc-dmt-indicators' => 'indicators.php',
-            'zc-dmt-calculations' => 'calculations.php',
-            'zc-dmt-backup' => 'backup-settings.php',
-            'zc-dmt-error-logs' => 'error-logs.php',
-            'zc-dmt-settings' => 'settings.php',
-            
-            // Specific action pages for Data Sources and Indicators
-            'zc-dmt-add-source' => 'add-source.php',
-            // 'zc-dmt-edit-source' => 'edit-source.php', // Add if this file exists
-            // 'zc-dmt-delete-source' => 'delete-source.php', // Add if this file exists
-            'zc-dmt-fetch-data' => 'fetch-indicator-data.php', // Assuming this file exists
-            // 'zc-dmt-test-connection' => 'test-connection.php', // Add if this file exists
-            
-            // Specific action pages for Indicators
-            'zc-dmt-add-indicator' => 'add-indicator.php', // Assuming this file exists
-            // 'zc-dmt-edit-indicator' => 'edit-indicator.php', // Add if this file exists
-            // 'zc-dmt-delete-indicator' => 'delete-indicator.php', // Add if this file exists
-            
-            // Specific action pages for Calculations
-            // 'zc-dmt-add-calculation' => 'add-calculation.php', // Add if this file exists
-            // 'zc-dmt-edit-calculation' => 'edit-calculation.php', // Add if this file exists
-            // 'zc-dmt-delete-calculation' => 'delete-calculation.php', // Add if this file exists
-            // 'zc-dmt-execute-calculation' => 'execute-calculation.php', // Add if this file exists
-            
-            // Importer page
-            // 'zc-dmt-importer' => 'importer.php', // Add if this file exists
-        );
-
-        // Check if the requested page is valid and the file exists
-        if (isset($pages[$page]) && file_exists(ZC_DMT_PLUGIN_DIR . 'admin/' . $pages[$page])) {
-            // Check if the user has the required capability (this check is also often inside the individual files)
-            if (!current_user_can('manage_options')) {
-                 // Using wp_die is standard for WordPress admin access errors
-                wp_die(__('You do not have sufficient permissions to access this page.', 'zc-dmt'));
-            }
-
-            // Include the corresponding PHP file from the admin directory
-            require_once ZC_DMT_PLUGIN_DIR . 'admin/' . $pages[$page];
-            // Exit to prevent the default WordPress admin page loading
-            exit; 
-        }
-        // If the page is not in our list or the file doesn't exist, 
-        // WordPress will handle it normally (likely showing a "Cannot load ..." message)
-        // This ensures other admin pages (Posts, Pages, etc.) are unaffected.
-    }
-
 
     // --- Add this method for the new AJAX handler ---
     /**
@@ -354,7 +289,7 @@ class ZC_DMT {
             __('ZC DMT', 'zc-dmt'),
             'manage_options',
             'zc-dmt-dashboard',
-            '', // Callback is now handled by handle_admin_pages
+            array($this, 'dashboard_page'),
             'dashicons-chart-bar',
             6
         );
@@ -366,7 +301,7 @@ class ZC_DMT {
             __('Dashboard', 'zc-dmt'),
             'manage_options',
             'zc-dmt-dashboard',
-            '' // Callback is now handled by handle_admin_pages
+            array($this, 'dashboard_page')
         );
 
         // API Keys Management Page (Note: This page file is not in your initial structure)
@@ -376,7 +311,7 @@ class ZC_DMT {
         //     __('API Keys', 'zc-dmt'),
         //     'manage_options',
         //     'zc-dmt-api-management',
-        //     '' // Callback is now handled by handle_admin_pages
+        //     array($this, 'api_management_page')
         // );
 
         add_submenu_page(
@@ -385,7 +320,7 @@ class ZC_DMT {
             __('Data Sources', 'zc-dmt'),
             'manage_options',
             'zc-dmt-data-sources',
-            '' // Callback is now handled by handle_admin_pages
+            array($this, 'data_sources_page')
         );
 
         add_submenu_page(
@@ -394,7 +329,7 @@ class ZC_DMT {
             __('Indicators', 'zc-dmt'),
             'manage_options',
             'zc-dmt-indicators',
-            '' // Callback is now handled by handle_admin_pages
+            array($this, 'indicators_page')
         );
 
         add_submenu_page(
@@ -403,7 +338,7 @@ class ZC_DMT {
             __('Manual Calculations', 'zc-dmt'),
             'manage_options',
             'zc-dmt-calculations',
-            '' // Callback is now handled by handle_admin_pages
+            array($this, 'calculations_page')
         );
 
         add_submenu_page(
@@ -412,7 +347,7 @@ class ZC_DMT {
             __('Backup Settings', 'zc-dmt'),
             'manage_options',
             'zc-dmt-backup',
-            '' // Callback is now handled by handle_admin_pages
+            array($this, 'backup_settings_page')
         );
 
         add_submenu_page(
@@ -421,7 +356,7 @@ class ZC_DMT {
             __('Error Logs', 'zc-dmt'),
             'manage_options',
             'zc-dmt-error-logs',
-            '' // Callback is now handled by handle_admin_pages
+            array($this, 'error_logs_page')
         );
 
         add_submenu_page(
@@ -430,93 +365,63 @@ class ZC_DMT {
             __('Settings', 'zc-dmt'),
             'manage_options',
             'zc-dmt-settings',
-            '' // Callback is now handled by handle_admin_pages
+            array($this, 'settings_page')
         );
     }
 
-    // These methods are no longer needed for page loading as handle_admin_pages takes over.
-    // They can be removed or kept empty.
     public function dashboard_page() {
-        // Handled by handle_admin_pages
+        require_once ZC_DMT_PLUGIN_DIR . 'admin/dashboard.php';
     }
 
     // public function api_management_page() { // Commented out as the file might not exist yet
-    //     // Handled by handle_admin_pages
+    //     require_once ZC_DMT_PLUGIN_DIR . 'admin/api-management.php';
     // }
 
     public function data_sources_page() {
-        // Handled by handle_admin_pages
+        require_once ZC_DMT_PLUGIN_DIR . 'admin/data-sources.php';
     }
 
     public function indicators_page() {
-        // Handled by handle_admin_pages
+        require_once ZC_DMT_PLUGIN_DIR . 'admin/indicators.php'; // Ensure this file exists
     }
 
     public function calculations_page() {
-        // Handled by handle_admin_pages
+        require_once ZC_DMT_PLUGIN_DIR . 'admin/calculations.php'; // Ensure this file exists
     }
 
     public function backup_settings_page() {
-        // Handled by handle_admin_pages
+        require_once ZC_DMT_PLUGIN_DIR . 'admin/backup-settings.php'; // Ensure this file exists
     }
 
     public function error_logs_page() {
-        // Handled by handle_admin_pages
+        require_once ZC_DMT_PLUGIN_DIR . 'admin/error-logs.php'; // Ensure this file exists
     }
 
     public function settings_page() {
-        // Handled by handle_admin_pages
+        require_once ZC_DMT_PLUGIN_DIR . 'admin/settings.php'; // Ensure this file exists
     }
 
     public function enqueue_admin_scripts($hook) {
-        // --- CRITICAL FIX: Prevent loading scripts on non-plugin pages to avoid admin bar conflicts ---
+        // Only enqueue scripts on our plugin pages
+        $pages = array('zc-dmt-dashboard', /*'zc-dmt-api-management',*/ 'zc-dmt-data-sources', 'zc-dmt-indicators', 'zc-dmt-calculations', 'zc-dmt-backup', 'zc-dmt-error-logs', 'zc-dmt-settings');
         
-        // Get the current page slug from the query, which is more reliable for our custom pages
-        $current_page = isset($_GET['page']) ? sanitize_key($_GET['page']) : '';
+        if (in_array($hook, $pages)) {
+            wp_enqueue_style('zc-dmt-admin-css', ZC_DMT_PLUGIN_URL . 'assets/css/admin.css', array(), ZC_DMT_VERSION);
+            wp_enqueue_script('zc-dmt-admin-js', ZC_DMT_PLUGIN_URL . 'assets/js/admin.js', array('jquery'), ZC_DMT_VERSION, true);
+            
+            // Localize script with AJAX URL and nonces
+            wp_localize_script('zc-dmt-admin-js', 'zc_dmt_admin', array(
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'confirm_delete' => __('Are you sure you want to delete this item?', 'zc-dmt'),
+                'saving' => __('Saving...', 'zc-dmt'),
+                'load_preview' => __('Load Preview', 'zc-dmt'),
+                'loading' => __('Loading...', 'zc-dmt'),
+                // Add nonces for the new AJAX actions
+                'get_source_config_nonce' => wp_create_nonce('zc_dmt_get_source_config_nonce'),
+                'add_source_nonce' => wp_create_nonce('zc_dmt_add_source_nonce') // Nonce for form submission
 
-        // Define the list of page slugs where our scripts/styles should be loaded
-        // This should ideally match the keys in the $pages array in handle_admin_pages
-        $plugin_pages = array(
-            'zc-dmt-dashboard',
-            'zc-dmt-data-sources',
-            'zc-dmt-indicators',
-            'zc-dmt-calculations',
-            'zc-dmt-backup',
-            'zc-dmt-error-logs',
-            'zc-dmt-settings',
-            'zc-dmt-add-source',
-            'zc-dmt-fetch-data'
-            // Add other specific pages handled by handle_admin_pages if needed
-        );
-
-        // --- Only proceed if it's one of our plugin's pages ---
-        if (!in_array($current_page, $plugin_pages)) {
-            return; // Exit early if not a DMT page. This prevents conflicts on other admin screens.
+            ));
         }
-
-        // --- Enqueue styles and scripts ---
-        // Use the plugin's version for cache busting
-        $version = ZC_DMT_VERSION;
-
-        // Enqueue CSS
-        wp_enqueue_style('zc-dmt-admin-css', ZC_DMT_PLUGIN_URL . 'assets/css/admin.css', array(), $version);
-
-        // Enqueue JavaScript - IMPORTANT: Make sure 'jquery' is a dependency
-        // Pass 'true' for $in_footer to load script in the footer, often better for performance and avoiding conflicts
-        wp_enqueue_script('zc-dmt-admin-js', ZC_DMT_PLUGIN_URL . 'assets/js/admin.js', array('jquery'), $version, true);
-
-        // --- Localize script with necessary data ---
-        // This makes PHP variables available to the JavaScript code
-        wp_localize_script('zc-dmt-admin-js', 'zc_dmt_admin', array(
-            'ajax_url' => admin_url('admin-ajax.php'),
-            'confirm_delete' => __('Are you sure you want to delete this item?', 'zc-dmt'),
-            'saving' => __('Saving...', 'zc-dmt'),
-            'load_preview' => __('Load Preview', 'zc-dmt'),
-            'loading' => __('Loading...', 'zc-dmt'),
-            // Nonces for security
-            'get_source_config_nonce' => wp_create_nonce('zc_dmt_get_source_config_nonce'),
-            'add_source_nonce' => wp_create_nonce('zc_dmt_add_source_nonce')
-        ));
     }
 
     public function enqueue_public_scripts() {
