@@ -47,30 +47,86 @@ class ZC_DMT {
         // Register admin menu
         add_action('admin_menu', array($this, 'register_admin_menu'));
         
+        // Handle loading of specific admin pages (like edit-source, delete-source)
+        // This is crucial for pages that are not direct menu items but are accessed via links/buttons
+        add_action('admin_init', array($this, 'handle_admin_pages'));
+
         // Enqueue admin scripts and styles
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
         
         // Handle AJAX requests for Data Sources page
-        add_action('wp-ajax_zc_dmt_get_source_config', array($this, 'ajax_get_source_config'));
+        add_action('wp_ajax_zc_dmt_get_source_config', array($this, 'ajax_get_source_config'));
 		// If you want non-logged-in users to potentially access this (unlikely for admin), you'd use:
-		// add_action('wp-ajax_nopriv_zc_dmt_get_source_config', array($this, 'ajax_get_source_config')); 
+		// add_action('wp_ajax_nopriv_zc_dmt_get_source_config', array($this, 'ajax_get_source_config')); 
 
         // Handle form submission via AJAX from data-sources.php page
-        add_action('wp-ajax_zc_dmt_add_source_from_data_sources_page', array($this, 'ajax_add_source_from_data_sources_page'));
+        add_action('wp_ajax_zc_dmt_add_source_from_data_sources_page', array($this, 'ajax_add_source_from_data_sources_page'));
 
         // --- Potentially add REST API endpoints here or in a dedicated class ---
         // The current code adds one endpoint, but the guide suggests a full REST API class.
         // add_action('rest_api_init', array($this, 'register_rest_routes')); // Example if using a method in this class
     }
 
+    /**
+     * Handles loading of specific admin pages that are not direct menu items.
+     * This fixes the "You are not allowed to access this page" errors for action pages.
+     * Action: admin_init
+     */
+    public function handle_admin_pages() {
+        // Get the current page slug from the query
+        $page = isset($_GET['page']) ? sanitize_key($_GET['page']) : '';
+
+        // Define an array of valid page slugs and their corresponding files
+        // These are pages accessed via links/buttons, not menu items
+        $action_pages = array(
+            'zc-dmt-edit-source' => 'edit-source.php',
+            'zc-dmt-delete-source' => 'delete-source.php',
+            'zc-dmt-fetch-data' => 'fetch-indicator-data.php',
+            // Add other action pages as needed, e.g., 'zc-dmt-add-indicator', 'zc-dmt-edit-indicator', etc.
+            // 'zc-dmt-test-connection' => 'test-connection.php', // Add if this file exists
+            // 'zc-dmt-add-indicator' => 'add-indicator.php',
+            // 'zc-dmt-edit-indicator' => 'edit-indicator.php',
+            // 'zc-dmt-delete-indicator' => 'delete-indicator.php',
+            // 'zc-dmt-delete-calculation' => 'delete-calculation.php',
+            // 'zc-dmt-execute-calculation' => 'execute-calculation.php',
+            // 'zc-dmt-add-calculation' => 'add-calculation.php',
+            // 'zc-dmt-edit-calculation' => 'edit-calculation.php',
+        );
+
+        // Check if the requested page is one of our specific action pages
+        if (isset($action_pages[$page])) {
+            // Check user capabilities (standard check for admin pages)
+            if (!current_user_can('manage_options')) {
+                 // Using wp_die is standard for WordPress admin access errors
+                wp_die(__('You do not have sufficient permissions to access this page.', 'zc-dmt'));
+            }
+
+            // Construct the full file path
+            $file_path = ZC_DMT_PLUGIN_DIR . 'admin/' . $action_pages[$page];
+
+            // Check if the file exists
+            if (file_exists($file_path)) {
+                // Include the corresponding PHP file from the admin directory
+                require_once $file_path;
+                // Exit to prevent the default WordPress admin page loading
+                exit; 
+            } else {
+                // If the file is missing, show a generic error
+                wp_die(sprintf(__('The requested page file (%s) could not be found.', 'zc-dmt'), esc_html($action_pages[$page])));
+            }
+        }
+        // If the page is not one of our action pages, let WordPress handle it normally.
+    }
+
+
     // --- Add this method for the new AJAX handler ---
     /**
      * Handles the AJAX request from data-sources.php to get the configuration form for a selected source type.
-     * Action: wp-ajax_zc_dmt_get_source_config
+     * Action: wp_ajax_zc_dmt_get_source_config
      */
     public function ajax_get_source_config() {
         // Check nonce for security
-        check-ajax_referer('zc_dmt_get_source_config_nonce', 'nonce');
+        check_ajax_referer('zc_dmt_get_source_config_nonce', 'nonce');
 
         // Check user capabilities
         if (!current_user_can('manage_options')) {
@@ -112,25 +168,25 @@ class ZC_DMT {
         echo '<table class="form-table">';
 
         echo '<tr>';
-        echo '<th scope="row"><label for="source_name-ajax">' . __('Name', 'zc-dmt') . '</label></th>';
+        echo '<th scope="row"><label for="source_name_ajax">' . __('Name', 'zc-dmt') . '</label></th>';
         echo '<td>';
-        echo '<input type="text" name="source_name" id="source_name-ajax" value="" class="regular-text" required>';
+        echo '<input type="text" name="source_name" id="source_name_ajax" value="" class="regular-text" required>';
         echo '<p class="description">' . __('Enter a descriptive name for this data source.', 'zc-dmt') . '</p>';
         echo '</td>';
         echo '</tr>';
 
         echo '<tr>';
-        echo '<th scope="row"><label for="source_slug-ajax">' . __('Slug', 'zc-dmt') . '</label></th>';
+        echo '<th scope="row"><label for="source_slug_ajax">' . __('Slug', 'zc-dmt') . '</label></th>';
         echo '<td>';
-        echo '<input type="text" name="source_slug" id="source_slug-ajax" value="" class="regular-text">';
+        echo '<input type="text" name="source_slug" id="source_slug_ajax" value="" class="regular-text">';
         echo '<p class="description">' . __('A unique identifier for this data source.', 'zc-dmt') . '</p>';
         echo '</td>';
         echo '</tr>';
 
         echo '<tr>';
-        echo '<th scope="row"><label for="source_description-ajax">' . __('Description', 'zc-dmt') . '</label></th>';
+        echo '<th scope="row"><label for="source_description_ajax">' . __('Description', 'zc-dmt') . '</label></th>';
         echo '<td>';
-        echo '<textarea name="source_description" id="source_description-ajax" class="large-text" rows="3"></textarea>';
+        echo '<textarea name="source_description" id="source_description_ajax" class="large-text" rows="3"></textarea>';
         echo '<p class="description">' . __('A brief description of this data source.', 'zc-dmt') . '</p>';
         echo '</td>';
         echo '</tr>';
@@ -139,7 +195,7 @@ class ZC_DMT {
         echo '<th scope="row">' . __('Active', 'zc-dmt') . '</th>';
         echo '<td>';
         echo '<label>';
-        echo '<input type="checkbox" name="source_active" id="source_active-ajax" value="1" checked>';
+        echo '<input type="checkbox" name="source_active" id="source_active_ajax" value="1" checked>';
         echo ' ' . __('Enable this data source', 'zc-dmt');
         echo '</label>';
         echo '<p class="description">' . __('Uncheck to disable this data source without deleting it.', 'zc-dmt') . '</p>';
@@ -183,15 +239,15 @@ class ZC_DMT {
         (function($) {
             // Re-attach the auto-generate slug listener for dynamically loaded forms
             // Use unique IDs to avoid conflicts if multiple instances could exist (unlikely here)
-            $('#source_name-ajax').off('blur.zc_dmt-ajax').on('blur.zc_dmt-ajax', function() {
+            $('#source_name_ajax').off('blur.zc_dmt_ajax').on('blur.zc_dmt_ajax', function() {
                 var name = $(this).val();
                 var slug = name.toLowerCase()
                                .replace(/[^a-z0-9\s-]/g, '')
                                .replace(/\s+/g, '-')
                                .replace(/-+/g, '-')
                                .trim('-');
-                if (!$('#source_slug-ajax').val()) {
-                    $('#source_slug-ajax').val(slug);
+                if (!$('#source_slug_ajax').val()) {
+                    $('#source_slug_ajax').val(slug);
                 }
             });
         })(jQuery);
@@ -210,11 +266,11 @@ class ZC_DMT {
     // --- Add this method for handling the AJAX form submission from data-sources.php ---
     /**
      * Handles the AJAX form submission from the dynamic form on data-sources.php.
-     * Action: wp-ajax_zc_dmt_add_source_from_data_sources_page
+     * Action: wp_ajax_zc_dmt_add_source_from_data_sources_page
      */
     public function ajax_add_source_from_data_sources_page() {
         // Check nonce for security
-        check-ajax_referer('zc_dmt_add_source_nonce', 'nonce'); // Use the same nonce as add-source.php
+        check_ajax_referer('zc_dmt_add_source_nonce', 'nonce'); // Use the same nonce as add-source.php
 
         // Check user capabilities
         if (!current_user_can('manage_options')) {
@@ -224,7 +280,7 @@ class ZC_DMT {
         // --- Replicate logic from add-source.php form processing ---
         // Get data from POST (sent via AJAX serialize)
         $source_type = isset($_POST['source_type']) ? sanitize_key($_POST['source_type']) : '';
-        // Verify nonce (already checked above via check-ajax_referer, but form also sends it)
+        // Verify nonce (already checked above via check_ajax_referer, but form also sends it)
         $nonce = isset($_POST['zc_dmt_add_source_nonce']) ? $_POST['zc_dmt_add_source_nonce'] : '';
 
         if ( empty($source_type) || !wp_verify_nonce($nonce, 'zc_dmt_add_source') ) {
@@ -367,6 +423,14 @@ class ZC_DMT {
             'zc-dmt-settings',
             array($this, 'settings_page')
         );
+		
+		// --- Register invisible submenu items for action pages ---
+        // This is an alternative method to handle_admin_pages, but handle_admin_pages is preferred.
+        // These entries register the page slug with WordPress but don't show in the menu.
+        // add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-edit-source', '');
+        // add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-delete-source', '');
+        // add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-fetch-data', '');
+        // --- End of alternative method ---
     }
 
     public function dashboard_page() {
@@ -402,26 +466,58 @@ class ZC_DMT {
     }
 
     public function enqueue_admin_scripts($hook) {
-        // Only enqueue scripts on our plugin pages
-        $pages = array('zc-dmt-dashboard', /*'zc-dmt-api-management',*/ 'zc-dmt-data-sources', 'zc-dmt-indicators', 'zc-dmt-calculations', 'zc-dmt-backup', 'zc-dmt-error-logs', 'zc-dmt-settings');
+        // --- FIXED: Prevent loading scripts on non-plugin pages to avoid admin bar conflicts ---
+        // AND ensure scripts load on action pages too.
         
-        if (in_array($hook, $pages)) {
-            wp_enqueue_style('zc-dmt-admin-css', ZC_DMT_PLUGIN_URL . 'assets/css/admin.css', array(), ZC_DMT_VERSION);
-            wp_enqueue_script('zc-dmt-admin-js', ZC_DMT_PLUGIN_URL . 'assets/js/admin.js', array('jquery'), ZC_DMT_VERSION, true);
-            
-            // Localize script with AJAX URL and nonces
-            wp_localize_script('zc-dmt-admin-js', 'zc_dmt_admin', array(
-                'ajax_url' => admin_url('admin-ajax.php'),
-                'confirm_delete' => __('Are you sure you want to delete this item?', 'zc-dmt'),
-                'saving' => __('Saving...', 'zc-dmt'),
-                'load_preview' => __('Load Preview', 'zc-dmt'),
-                'loading' => __('Loading...', 'zc-dmt'),
-                // Add nonces for the new AJAX actions
-                'get_source_config_nonce' => wp_create_nonce('zc_dmt_get_source_config_nonce'),
-                'add_source_nonce' => wp_create_nonce('zc_dmt_add_source_nonce') // Nonce for form submission
+        // Get the current page slug from the query, which is more reliable for our custom pages
+        $current_page = isset($_GET['page']) ? sanitize_key($_GET['page']) : '';
 
-            ));
+        // Define the list of page slugs where our scripts/styles should be loaded
+        // Include main pages AND action pages
+        $plugin_pages = array(
+            // Main menu pages
+            'zc-dmt-dashboard',
+            'zc-dmt-data-sources',
+            'zc-dmt-indicators',
+            'zc-dmt-calculations',
+            'zc-dmt-backup',
+            'zc-dmt-error-logs',
+            'zc-dmt-settings',
+            // Action pages that need scripts
+            'zc-dmt-add-source',
+            'zc-dmt-edit-source',
+            'zc-dmt-fetch-data'
+            // Add other specific pages handled by handle_admin_pages if they need JS/CSS
+        );
+
+        // --- Only proceed if it's one of our plugin's pages ---
+        if (!in_array($current_page, $plugin_pages)) {
+            return; // Exit early if not a DMT page. This prevents conflicts on other admin screens.
         }
+
+        // --- Enqueue styles and scripts ---
+        // Use the plugin's version for cache busting
+        $version = ZC_DMT_VERSION;
+
+        // Enqueue CSS
+        wp_enqueue_style('zc-dmt-admin-css', ZC_DMT_PLUGIN_URL . 'assets/css/admin.css', array(), $version);
+
+        // Enqueue JavaScript - IMPORTANT: Make sure 'jquery' is a dependency
+        // Pass 'true' for $in_footer to load script in the footer, often better for performance and avoiding conflicts
+        wp_enqueue_script('zc-dmt-admin-js', ZC_DMT_PLUGIN_URL . 'assets/js/admin.js', array('jquery'), $version, true);
+
+        // --- Localize script with necessary data ---
+        // This makes PHP variables available to the JavaScript code
+        wp_localize_script('zc-dmt-admin-js', 'zc_dmt_admin', array(
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'confirm_delete' => __('Are you sure you want to delete this item?', 'zc-dmt'),
+            'saving' => __('Saving...', 'zc-dmt'),
+            'load_preview' => __('Load Preview', 'zc-dmt'),
+            'loading' => __('Loading...', 'zc-dmt'),
+            // Nonces for security
+            'get_source_config_nonce' => wp_create_nonce('zc_dmt_get_source_config_nonce'),
+            'add_source_nonce' => wp_create_nonce('zc_dmt_add_source_nonce')
+        ));
     }
 
     public function enqueue_public_scripts() {
