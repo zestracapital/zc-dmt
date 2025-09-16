@@ -46,10 +46,9 @@ class ZC_DMT {
     private function __construct() {
         // Register admin menu
         add_action('admin_menu', array($this, 'register_admin_menu'));
-        
-        // Handle loading of specific admin pages (like edit-source, delete-source)
+        // Handle loading of specific admin pages (like edit-source, delete-source) AFTER menu is registered
         // This is crucial for pages that are not direct menu items but are accessed via links/buttons
-        add_action('admin_init', array($this, 'handle_admin_pages'));
+        add_action('admin_menu', array($this, 'handle_admin_pages')); // Changed hook to admin_menu
 
         // Enqueue admin scripts and styles
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
@@ -70,7 +69,7 @@ class ZC_DMT {
     /**
      * Handles loading of specific admin pages that are not direct menu items.
      * This fixes the "You are not allowed to access this page" errors for action pages.
-     * Action: admin_init
+     * Action: admin_menu (hooked after main menu registration)
      */
     public function handle_admin_pages() {
         // Get the current page slug from the query
@@ -94,28 +93,20 @@ class ZC_DMT {
         );
 
         // Check if the requested page is one of our specific action pages
-        if (isset($action_pages[$page])) {
-            // Check user capabilities (standard check for admin pages)
-            if (!current_user_can('manage_options')) {
-                 // Using wp_die is standard for WordPress admin access errors
-                wp_die(__('You do not have sufficient permissions to access this page.', 'zc-dmt'));
-            }
-
-            // Construct the full file path
-            $file_path = ZC_DMT_PLUGIN_DIR . 'admin/' . $action_pages[$page];
-
-            // Check if the file exists
-            if (file_exists($file_path)) {
-                // Include the corresponding PHP file from the admin directory
-                require_once $file_path;
-                // Exit to prevent the default WordPress admin page loading
-                exit; 
-            } else {
-                // If the file is missing, show a generic error
-                wp_die(sprintf(__('The requested page file (%s) could not be found.', 'zc-dmt'), esc_html($action_pages[$page])));
-            }
+        if (array_key_exists($page, $action_pages)) { // Changed to array_key_exists for clarity
+            // Capability check is now handled inside the individual page files.
+            // We just need to tell WordPress that this page slug is valid for our plugin.
+            // Adding an invisible submenu item achieves this.
+            // The callback will be handled by the file itself when it's included.
+            add_submenu_page(
+                'zc-dmt-dashboard', // Parent slug
+                '', // Page title (empty for invisible)
+                '', // Menu title (empty for invisible)
+                'manage_options', // Capability (this is the key check)
+                $page, // Menu slug (must match the $_GET['page'])
+                '' // Callback function (empty, as the file will handle output)
+            );
         }
-        // If the page is not one of our action pages, let WordPress handle it normally.
     }
 
 
@@ -343,7 +334,7 @@ class ZC_DMT {
         add_menu_page(
             __('ZC DMT Dashboard', 'zc-dmt'),
             __('ZC DMT', 'zc-dmt'),
-            'manage_options',
+            'manage_options', // This capability is checked for the main menu
             'zc-dmt-dashboard',
             array($this, 'dashboard_page'),
             'dashicons-chart-bar',
@@ -355,7 +346,7 @@ class ZC_DMT {
             'zc-dmt-dashboard',
             __('Dashboard', 'zc-dmt'),
             __('Dashboard', 'zc-dmt'),
-            'manage_options',
+            'manage_options', // Capability for Dashboard submenu
             'zc-dmt-dashboard',
             array($this, 'dashboard_page')
         );
@@ -365,7 +356,7 @@ class ZC_DMT {
         //     'zc-dmt-dashboard',
         //     __('API Keys', 'zc-dmt'),
         //     __('API Keys', 'zc-dmt'),
-        //     'manage_options',
+        //     'manage_options', // Capability
         //     'zc-dmt-api-management',
         //     array($this, 'api_management_page')
         // );
@@ -374,7 +365,7 @@ class ZC_DMT {
             'zc-dmt-dashboard',
             __('Data Sources', 'zc-dmt'),
             __('Data Sources', 'zc-dmt'),
-            'manage_options',
+            'manage_options', // Capability
             'zc-dmt-data-sources',
             array($this, 'data_sources_page')
         );
@@ -383,7 +374,7 @@ class ZC_DMT {
             'zc-dmt-dashboard',
             __('Indicators', 'zc-dmt'),
             __('Indicators', 'zc-dmt'),
-            'manage_options',
+            'manage_options', // Capability
             'zc-dmt-indicators',
             array($this, 'indicators_page')
         );
@@ -392,7 +383,7 @@ class ZC_DMT {
             'zc-dmt-dashboard',
             __('Manual Calculations', 'zc-dmt'),
             __('Manual Calculations', 'zc-dmt'),
-            'manage_options',
+            'manage_options', // Capability
             'zc-dmt-calculations',
             array($this, 'calculations_page')
         );
@@ -401,7 +392,7 @@ class ZC_DMT {
             'zc-dmt-dashboard',
             __('Backup Settings', 'zc-dmt'),
             __('Backup Settings', 'zc-dmt'),
-            'manage_options',
+            'manage_options', // Capability
             'zc-dmt-backup',
             array($this, 'backup_settings_page')
         );
@@ -410,7 +401,7 @@ class ZC_DMT {
             'zc-dmt-dashboard',
             __('Error Logs', 'zc-dmt'),
             __('Error Logs', 'zc-dmt'),
-            'manage_options',
+            'manage_options', // Capability
             'zc-dmt-error-logs',
             array($this, 'error_logs_page')
         );
@@ -419,18 +410,12 @@ class ZC_DMT {
             'zc-dmt-dashboard',
             __('Settings', 'zc-dmt'),
             __('Settings', 'zc-dmt'),
-            'manage_options',
+            'manage_options', // Capability
             'zc-dmt-settings',
             array($this, 'settings_page')
         );
 		
-		// --- Register invisible submenu items for action pages ---
-        // This is an alternative method to handle_admin_pages, but handle_admin_pages is preferred.
-        // These entries register the page slug with WordPress but don't show in the menu.
-        // add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-edit-source', '');
-        // add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-delete-source', '');
-        // add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-fetch-data', '');
-        // --- End of alternative method ---
+		// --- Action pages are now registered via handle_admin_pages ---
     }
 
     public function dashboard_page() {
@@ -486,7 +471,8 @@ class ZC_DMT {
             // Action pages that need scripts
             'zc-dmt-add-source',
             'zc-dmt-edit-source',
-            'zc-dmt-fetch-data'
+            'zc-dmt-fetch-data',
+            'zc-dmt-delete-source' // Added delete-source
             // Add other specific pages handled by handle_admin_pages if they need JS/CSS
         );
 
