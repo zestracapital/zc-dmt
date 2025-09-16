@@ -46,10 +46,7 @@ class ZC_DMT {
     private function __construct() {
         // Register admin menu
         add_action('admin_menu', array($this, 'register_admin_menu'));
-        // Handle loading of specific admin pages (like edit-source, delete-source) AFTER menu is registered
-        // This is crucial for pages that are not direct menu items but are accessed via links/buttons
-        add_action('admin_menu', array($this, 'handle_admin_pages')); // Changed hook to admin_menu
-
+        
         // Enqueue admin scripts and styles
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
         
@@ -65,50 +62,6 @@ class ZC_DMT {
         // The current code adds one endpoint, but the guide suggests a full REST API class.
         // add_action('rest_api_init', array($this, 'register_rest_routes')); // Example if using a method in this class
     }
-
-    /**
-     * Handles loading of specific admin pages that are not direct menu items.
-     * This fixes the "You are not allowed to access this page" errors for action pages.
-     * Action: admin_menu (hooked after main menu registration)
-     */
-    public function handle_admin_pages() {
-        // Get the current page slug from the query
-        $page = isset($_GET['page']) ? sanitize_key($_GET['page']) : '';
-
-        // Define an array of valid page slugs and their corresponding files
-        // These are pages accessed via links/buttons, not menu items
-        $action_pages = array(
-            'zc-dmt-edit-source' => 'edit-source.php',
-            'zc-dmt-delete-source' => 'delete-source.php',
-            'zc-dmt-fetch-data' => 'fetch-indicator-data.php',
-            // Add other action pages as needed, e.g., 'zc-dmt-add-indicator', 'zc-dmt-edit-indicator', etc.
-            // 'zc-dmt-test-connection' => 'test-connection.php', // Add if this file exists
-            // 'zc-dmt-add-indicator' => 'add-indicator.php',
-            // 'zc-dmt-edit-indicator' => 'edit-indicator.php',
-            // 'zc-dmt-delete-indicator' => 'delete-indicator.php',
-            // 'zc-dmt-delete-calculation' => 'delete-calculation.php',
-            // 'zc-dmt-execute-calculation' => 'execute-calculation.php',
-            // 'zc-dmt-add-calculation' => 'add-calculation.php',
-            // 'zc-dmt-edit-calculation' => 'edit-calculation.php',
-        );
-
-        // Check if the requested page is one of our specific action pages
-        if (array_key_exists($page, $action_pages)) { // Changed to array_key_exists for clarity
-            // Capability check is now handled inside the individual page files.
-            // We just need to tell WordPress that this page slug is valid for our plugin.
-            // Adding an invisible submenu item achieves this.
-            // The callback will be handled by the file itself when it's included.
-            add_submenu_page(
-                'zc-dmt-dashboard', // Parent slug
-                '', // Page title (empty for invisible)
-                '', // Menu title (empty for invisible)
-                'manage_options', // Capability (this is the key check)
-                $page, // Menu slug (must match the $_GET['page'])
-                '' // Callback function (empty, as the file will handle output)
-            );
-        }
-    }
-
 
     // --- Add this method for the new AJAX handler ---
     /**
@@ -415,7 +368,15 @@ class ZC_DMT {
             array($this, 'settings_page')
         );
 		
-		// --- Action pages are now registered via handle_admin_pages ---
+		// --- Action pages need to be registered as submenu items to be accessible ---
+        // These are the pages accessed via links/buttons like edit-source.php
+        // We register them as invisible submenu items so WordPress knows they are valid.
+        add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-add-source', '');
+        add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-edit-source', '');
+        add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-delete-source', '');
+        add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-fetch-data', '');
+        // Add others as needed: add-indicator, edit-indicator, delete-indicator, etc.
+        // --- End of action page registrations ---
     }
 
     public function dashboard_page() {
@@ -473,7 +434,7 @@ class ZC_DMT {
             'zc-dmt-edit-source',
             'zc-dmt-fetch-data',
             'zc-dmt-delete-source' // Added delete-source
-            // Add other specific pages handled by handle_admin_pages if they need JS/CSS
+            // Add other specific pages if they need JS/CSS
         );
 
         // --- Only proceed if it's one of our plugin's pages ---
