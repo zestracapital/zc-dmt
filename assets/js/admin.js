@@ -4,6 +4,16 @@
  */
 
 jQuery(document).ready(function($) {
+    // --- ONLY run our custom scripts if we are on a ZC DMT page ---
+    // Check if the body has a class indicating it's a DMT page
+    // This is a common WordPress convention, or check for a specific element
+    if (!$('body').hasClass('zc-dmt-admin-page') && $('#wpbody-content .wrap.zc-dmt').length === 0) {
+        // If not on a DMT page, exit early to prevent conflicts
+        // console.log('Not a DMT page, exiting JS early');
+        return;
+    }
+    // console.log('Running ZC DMT specific JS');
+
     // Tab navigation
     $('.zc-tabs-nav a').on('click', function(e) {
         e.preventDefault();
@@ -21,9 +31,11 @@ jQuery(document).ready(function($) {
     });
     
     // Auto-generate slug from name fields
-    $('#indicator_name, #source_name, #calculation_name').on('blur', function() {
+    $('#indicator_name, #source_name, #zc_dmt_add_source #source_name_ajax, #calculation_name').on('blur', function() {
         var name = $(this).val();
-        var slugField = $('#' + $(this).attr('id').replace('_name', '_slug'));
+        var baseId = $(this).attr('id');
+        var slugId = baseId.replace('_name', '_slug');
+        var slugField = $('#' + slugId);
         
         if (slugField.length && !slugField.val()) {
             var slug = name.toLowerCase()
@@ -64,10 +76,15 @@ jQuery(document).ready(function($) {
         }
     });
     
-    // Handle form submissions with loading states
-    $('form').on('submit', function() {
-        var submitButton = $(this).find('input[type="submit"]');
+    // --- FIX: Scope the form submission handler to only DMT forms ---
+    // Handle form submissions with loading states - ONLY for forms inside .zc-dmt-wrap or with a specific class
+    $('.zc-dmt-wrap form, form.zc-dmt-form').on('submit', function() {
+        var submitButton = $(this).find('input[type="submit"], button[type="submit"]');
         if (submitButton.length) {
+            // Store original text
+            if (!submitButton.data('original-text')) {
+                submitButton.data('original-text', submitButton.val() || submitButton.text());
+            }
             submitButton.prop('disabled', true).val(zc_dmt_admin.saving);
         }
     });
@@ -104,7 +121,9 @@ jQuery(document).ready(function($) {
         
         // For now, just simulate
         setTimeout(function() {
-            button.prop('disabled', false).text(zc_dmt_admin.load_preview);
+            // Restore original text if it was stored
+            var originalText = button.data('original-text') || zc_dmt_admin.load_preview;
+            button.prop('disabled', false).text(originalText);
         }, 1000);
     });
 });
