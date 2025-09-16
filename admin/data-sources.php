@@ -111,11 +111,17 @@ if (class_exists('ZC_DMT_Indicators')) {
                                 ?>
                             </td>
                             <td>
-                                <?php if ($source->is_active) : ?>
+                                <?php 
+                                // --- Fix for Undefined property warning ---
+                                // Safely check if the is_active property exists and is true
+                                $is_active = isset($source->is_active) ? (int)$source->is_active : 0;
+                                
+                                if ($is_active === 1) : ?>
                                     <span class="zc-status-active"><?php esc_html_e('Active', 'zc-dmt'); ?></span>
                                 <?php else : ?>
                                     <span class="zc-status-inactive"><?php esc_html_e('Inactive', 'zc-dmt'); ?></span>
                                 <?php endif; ?>
+                                <!-- --- End of fix --- -->
                             </td>
                             <td>
                                 <?php 
@@ -247,8 +253,12 @@ jQuery(document).ready(function($) {
                 nonce: '<?php echo wp_create_nonce('zc_dmt_get_source_config_nonce'); ?>'
             },
             success: function(response) {
-                // Update the container with the returned HTML
-                $('#source-form-container').html(response.data.html);
+                if (response.success) {
+                    // Update the container with the returned HTML
+                    $('#source-form-container').html(response.data.html);
+                } else {
+                    $('#source-form-container').html('<p><?php esc_html_e('Error loading configuration:', 'zc-dmt'); ?> ' + (response.data.message || '<?php esc_html_e('Please try again.', 'zc-dmt'); ?>') + '</p>');
+                }
             },
             error: function(xhr, status, error) {
                 console.error('AJAX Error:', status, error);
@@ -296,142 +306,3 @@ jQuery(document).ready(function($) {
     });
 });
 </script>
-
-<?php
-// --- Add this function to your main plugin file (e.g., zc-dmt.php) ---
-// This function handles the AJAX request to get the source configuration form
-add_action('wp_ajax_zc_dmt_get_source_config', 'zc_dmt_ajax_get_source_config');
-function zc_dmt_ajax_get_source_config() {
-    // Check nonce for security
-    check_ajax_referer('zc_dmt_get_source_config_nonce', 'nonce');
-
-    // Check user capabilities
-    if (!current_user_can('manage_options')) {
-        wp_die(__('Unauthorized', 'zc-dmt'));
-    }
-
-    $source_type = isset($_POST['source_type']) ? sanitize_key($_POST['source_type']) : '';
-
-    if (empty($source_type)) {
-        wp_send_json_error(array('message' => __('Invalid source type.', 'zc-dmt')));
-    }
-
-    // Get available data source types
-    if (!class_exists('ZC_DMT_Data_Sources')) {
-        wp_send_json_error(array('message' => __('Data sources class not found.', 'zc-dmt')));
-    }
-
-    $data_sources = new ZC_DMT_Data_Sources();
-    $source_info = $data_sources->get_source($source_type);
-
-    if (!$source_info) {
-        wp_send_json_error(array('message' => __('Source type not found.', 'zc-dmt')));
-    }
-
-    // --- Generate the HTML for the configuration form ---
-    ob_start(); // Start output buffering
-
-    // Hidden fields for source type and action
-    echo '<input type="hidden" name="source_type" value="' . esc_attr($source_type) . '">';
-    echo '<input type="hidden" name="zc_dmt_add_source_nonce" value="' . esc_attr(wp_create_nonce('zc_dmt_add_source')) . '">';
-
-    // Source Details Section (Basic fields)
-    echo '<div class="zc-form-section">';
-    echo '<h3>' . sprintf(__('Add %s Source', 'zc-dmt'), esc_html($source_info['name'])) . '</h3>';
-    echo '<table class="form-table">';
-
-    echo '<tr>';
-    echo '<th scope="row"><label for="source_name">' . __('Name', 'zc-dmt') . '</label></th>';
-    echo '<td>';
-    echo '<input type="text" name="source_name" id="source_name" value="" class="regular-text" required>';
-    echo '<p class="description">' . __('Enter a descriptive name for this data source.', 'zc-dmt') . '</p>';
-    echo '</td>';
-    echo '</tr>';
-
-    echo '<tr>';
-    echo '<th scope="row"><label for="source_slug">' . __('Slug', 'zc-dmt') . '</label></th>';
-    echo '<td>';
-    echo '<input type="text" name="source_slug" id="source_slug" value="" class="regular-text">';
-    echo '<p class="description">' . __('A unique identifier for this data source.', 'zc-dmt') . '</p>';
-    echo '</td>';
-    echo '</tr>';
-
-    echo '<tr>';
-    echo '<th scope="row"><label for="source_description">' . __('Description', 'zc-dmt') . '</label></th>';
-    echo '<td>';
-    echo '<textarea name="source_description" id="source_description" class="large-text" rows="3"></textarea>';
-    echo '<p class="description">' . __('A brief description of this data source.', 'zc-dmt') . '</p>';
-    echo '</td>';
-    echo '</tr>';
-
-    echo '<tr>';
-    echo '<th scope="row">' . __('Active', 'zc-dmt') . '</th>';
-    echo '<td>';
-    echo '<label>';
-    echo '<input type="checkbox" name="source_active" id="source_active" value="1" checked>';
-    echo ' ' . __('Enable this data source', 'zc-dmt');
-    echo '</label>';
-    echo '<p class="description">' . __('Uncheck to disable this data source without deleting it.', 'zc-dmt') . '</p>';
-    echo '</td>';
-    echo '</tr>';
-
-    echo '</table>';
-    echo '</div>'; // .zc-form-section
-
-    // Source Configuration Section (Dynamic fields)
-    echo '<div class="zc-form-section">';
-    echo '<h3>' . __('Source Configuration', 'zc-dmt') . '</h3>';
-
-    if (isset($source_info['config_fields']) && is_array($source_info['config_fields']) && !empty($source_info['config_fields'])) {
-        echo '<div class="zc-config-fields">';
-        echo '<h4>' . __('Settings', 'zc-dmt') . '</h4>';
-        echo '<table class="form-table">';
-
-        foreach ($source_info['config_fields'] as $field) {
-            echo '<tr>';
-            echo '<th scope="row"><label for="' . esc_attr($source_type . '_' . $field) . '">' . esc_html(ucwords(str_replace('_', ' ', $field))) . '</label></th>';
-            echo '<td>';
-            echo '<input type="text" name="' . esc_attr($source_type . '_' . $field) . '" id="' . esc_attr($source_type . '_' . $field) . '" value="" class="regular-text">';
-            echo '<p class="description">' . sprintf(__('Enter the %s for this data source.', 'zc-dmt'), esc_html(ucwords(str_replace('_', ' ', $field)))) . '</p>';
-            echo '</td>';
-            echo '</tr>';
-        }
-
-        echo '</table>';
-        echo '</div>'; // .zc-config-fields
-    } else {
-        echo '<p>' . __('No configuration fields available for this source type.', 'zc-dmt') . '</p>';
-    }
-
-    echo '</div>'; // .zc-form-section
-
-    // Add the auto-slug script inline here as well for dynamic forms
-    ?>
-    <script>
-    (function($) {
-        // Re-attach the auto-generate slug listener for dynamically loaded forms
-        $('#source_name').off('blur.zc_dmt').on('blur.zc_dmt', function() {
-            var name = $(this).val();
-            var slug = name.toLowerCase()
-                           .replace(/[^a-z0-9\s-]/g, '')
-                           .replace(/\s+/g, '-')
-                           .replace(/-+/g, '-')
-                           .trim('-');
-            if (!$('#source_slug').val()) {
-                $('#source_slug').val(slug);
-            }
-        });
-    })(jQuery);
-    </script>
-    <?php
-
-    $form_html = ob_get_clean(); // Get the buffered content
-
-    if ($form_html === false) {
-        wp_send_json_error(array('message' => __('Failed to generate form HTML.', 'zc-dmt')));
-    }
-
-    wp_send_json_success(array('html' => $form_html));
-}
-// --- End of function to add to main plugin file ---
-?>
