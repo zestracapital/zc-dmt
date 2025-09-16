@@ -371,13 +371,47 @@ class ZC_DMT {
 		// --- Action pages need to be registered as submenu items to be accessible ---
         // These are the pages accessed via links/buttons like edit-source.php
         // We register them as invisible submenu items so WordPress knows they are valid.
-        add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-add-source', '');
-        add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-edit-source', '');
-        add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-delete-source', '');
-        add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-fetch-data', '');
-        // Add others as needed: add-indicator, edit-indicator, delete-indicator, etc.
+        // BUT NOW WE PROVIDE A CALLBACK FUNCTION TO LOAD THE CORRECT FILE.
+        add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-add-source', array($this, 'load_add_source_page'));
+        add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-edit-source', array($this, 'load_edit_source_page'));
+        add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-delete-source', array($this, 'load_delete_source_page'));
+        add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-fetch-data', array($this, 'load_fetch_data_page'));
+        add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-add-indicator', array($this, 'load_add_indicator_page'));
+        add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-edit-indicator', array($this, 'load_edit_indicator_page'));
+        add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-delete-indicator', array($this, 'load_delete_indicator_page'));
+        // Add others as needed
         // --- End of action page registrations ---
     }
+	
+	// --- Callback methods to load specific action pages ---
+	public function load_add_source_page() {
+		require_once ZC_DMT_PLUGIN_DIR . 'admin/add-source.php';
+	}
+	
+	public function load_edit_source_page() {
+		require_once ZC_DMT_PLUGIN_DIR . 'admin/edit-source.php';
+	}
+	
+	public function load_delete_source_page() {
+		require_once ZC_DMT_PLUGIN_DIR . 'admin/delete-source.php';
+	}
+	
+	public function load_fetch_data_page() {
+		require_once ZC_DMT_PLUGIN_DIR . 'admin/fetch-indicator-data.php';
+	}
+	
+	public function load_add_indicator_page() {
+		require_once ZC_DMT_PLUGIN_DIR . 'admin/add-indicator.php';
+	}
+	
+	public function load_edit_indicator_page() {
+		require_once ZC_DMT_PLUGIN_DIR . 'admin/edit-indicator.php';
+	}
+	
+	public function load_delete_indicator_page() {
+		require_once ZC_DMT_PLUGIN_DIR . 'admin/delete-indicator.php';
+	}
+	// --- End of callback methods ---
 
     public function dashboard_page() {
         require_once ZC_DMT_PLUGIN_DIR . 'admin/dashboard.php';
@@ -433,7 +467,10 @@ class ZC_DMT {
             'zc-dmt-add-source',
             'zc-dmt-edit-source',
             'zc-dmt-fetch-data',
-            'zc-dmt-delete-source' // Added delete-source
+            'zc-dmt-delete-source', // Added delete-source
+			'zc-dmt-add-indicator',
+			'zc-dmt-edit-indicator',
+			'zc-dmt-delete-indicator'
             // Add other specific pages if they need JS/CSS
         );
 
