@@ -46,7 +46,7 @@ class ZC_DMT_Database {
     private function __construct() {
         global $wpdb;
         $this->wpdb = $wpdb;
-        
+
         // Define table names with prefix
         $this->indicators_table = $this->wpdb->prefix . 'zc_dmt_indicators';
         $this->data_points_table = $this->wpdb->prefix . 'zc_dmt_data_points';
@@ -62,6 +62,7 @@ class ZC_DMT_Database {
     public function create_tables() {
         $charset_collate = $this->wpdb->get_charset_collate();
 
+        // --- FIXED: Added is_active column to indicators table ---
         // Indicators table
         $indicators_sql = "CREATE TABLE {$this->indicators_table} (
             id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -72,12 +73,15 @@ class ZC_DMT_Database {
             source_id VARCHAR(100),
             unit VARCHAR(50),
             frequency VARCHAR(20),
+            is_active TINYINT(1) UNSIGNED DEFAULT '1', -- Added column
             last_updated DATETIME,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
-            UNIQUE KEY slug (slug)
+            UNIQUE KEY slug (slug),
+            KEY is_active (is_active) -- Added index
         ) $charset_collate;";
+        // --- END OF FIX ---
 
         // Data points table
         $data_points_sql = "CREATE TABLE {$this->data_points_table} (
@@ -152,7 +156,7 @@ class ZC_DMT_Database {
         ) $charset_collate;";
 
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        
+
         dbDelta($indicators_sql);
         dbDelta($data_points_sql);
         dbDelta($calculations_sql);
@@ -183,20 +187,34 @@ class ZC_DMT_Database {
      * Insert a new indicator
      */
     public function insert_indicator($data) {
+        // --- FIXED: Include is_active in the insert data ---
+        $insert_data = array(
+            'name' => sanitize_text_field($data['name']),
+            'slug' => sanitize_key($data['slug']),
+            'description' => sanitize_textarea_field($data['description']),
+            'source' => sanitize_text_field($data['source']),
+            // Ensure source_config is serialized if it's an array
+            'source_config' => maybe_serialize(isset($data['source_config']) ? $data['source_config'] : array()),
+            'is_active' => (int) (isset($data['is_active']) ? $data['is_active'] : 1), // Default to active
+            'last_updated' => current_time('mysql')
+        );
+        // Handle optional fields
+        if (isset($data['source_id'])) {
+            $insert_data['source_id'] = sanitize_text_field($data['source_id']);
+        }
+        if (isset($data['unit'])) {
+            $insert_data['unit'] = sanitize_text_field($data['unit']);
+        }
+        if (isset($data['frequency'])) {
+            $insert_data['frequency'] = sanitize_text_field($data['frequency']);
+        }
+
         $result = $this->wpdb->insert(
             $this->indicators_table,
-            array(
-                'name' => sanitize_text_field($data['name']),
-                'slug' => sanitize_key($data['slug']),
-                'description' => sanitize_textarea_field($data['description']),
-                'source' => sanitize_text_field($data['source']),
-                'source_id' => sanitize_text_field($data['source_id']),
-                'unit' => sanitize_text_field($data['unit']),
-                'frequency' => sanitize_text_field($data['frequency']),
-                'last_updated' => current_time('mysql')
-            ),
-            array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
+            $insert_data,
+            array('%s', '%s', '%s', '%s', '%s', '%d', '%s') // Updated format specifiers
         );
+        // --- END OF FIX ---
 
         if ($result === false) {
             return new WP_Error('insert_indicator_failed', __('Failed to insert indicator.', 'zc-dmt'));
@@ -209,45 +227,145 @@ class ZC_DMT_Database {
      * Get all indicators
      */
     public function get_all_indicators() {
-        return $this->wpdb->get_results("SELECT * FROM {$this->indicators_table} ORDER BY name ASC");
+        $results = $this->wpdb->get_results("SELECT * FROM {$this->indicators_table} ORDER BY name ASC");
+
+        // --- FIXED: Ensure source_config is unserialized for each indicator ---
+        if (is_array($results)) {
+            foreach ($results as &$indicator) {
+                if (isset($indicator->source_config) && is_string($indicator->source_config)) {
+                    $indicator->source_config = maybe_unserialize($indicator->source_config);
+                    if ($indicator->source_config === false) {
+                        $indicator->source_config = array();
+                    }
+                } elseif (!isset($indicator->source_config)) {
+                     $indicator->source_config = array();
+                }
+                // Ensure is_active is an integer
+                if (isset($indicator->is_active)) {
+                    $indicator->is_active = (int) $indicator->is_active;
+                } else {
+                    $indicator->is_active = 0; // Default if missing
+                }
+            }
+        }
+        // --- END OF FIX ---
+
+        return $results;
     }
 
     /**
      * Get indicator by ID
      */
     public function get_indicator_by_id($id) {
-        return $this->wpdb->get_row(
+        $indicator = $this->wpdb->get_row(
             $this->wpdb->prepare("SELECT * FROM {$this->indicators_table} WHERE id = %d", $id)
         );
+
+        // --- FIXED: Ensure source_config is unserialized and is_active is integer ---
+        if ($indicator) {
+            if (isset($indicator->source_config) && is_string($indicator->source_config)) {
+                $indicator->source_config = maybe_unserialize($indicator->source_config);
+                if ($indicator->source_config === false) {
+                    $indicator->source_config = array();
+                }
+            } elseif (!isset($indicator->source_config)) {
+                 $indicator->source_config = array();
+            }
+            if (isset($indicator->is_active)) {
+                $indicator->is_active = (int) $indicator->is_active;
+            } else {
+                $indicator->is_active = 0; // Default if missing
+            }
+        }
+        // --- END OF FIX ---
+
+        return $indicator;
     }
 
     /**
      * Get indicator by slug
      */
     public function get_indicator_by_slug($slug) {
-        return $this->wpdb->get_row(
+        $indicator = $this->wpdb->get_row(
             $this->wpdb->prepare("SELECT * FROM {$this->indicators_table} WHERE slug = %s", $slug)
         );
+
+        // --- FIXED: Ensure source_config is unserialized and is_active is integer ---
+        if ($indicator) {
+            if (isset($indicator->source_config) && is_string($indicator->source_config)) {
+                $indicator->source_config = maybe_unserialize($indicator->source_config);
+                if ($indicator->source_config === false) {
+                    $indicator->source_config = array();
+                }
+            } elseif (!isset($indicator->source_config)) {
+                 $indicator->source_config = array();
+            }
+            if (isset($indicator->is_active)) {
+                $indicator->is_active = (int) $indicator->is_active;
+            } else {
+                $indicator->is_active = 0; // Default if missing
+            }
+        }
+        // --- END OF FIX ---
+
+        return $indicator;
     }
 
     /**
      * Update an indicator
      */
     public function update_indicator($id, $data) {
+        // --- FIXED: Include is_active in the update data if provided ---
+        $update_data = array(
+            'updated_at' => current_time('mysql')
+        );
+        $format = array('%s'); // For updated_at
+
+        if (array_key_exists('name', $data)) {
+            $update_data['name'] = sanitize_text_field($data['name']);
+            $format[] = '%s';
+        }
+        if (array_key_exists('slug', $data)) {
+            $update_data['slug'] = sanitize_key($data['slug']);
+            $format[] = '%s';
+        }
+        if (array_key_exists('description', $data)) {
+            $update_data['description'] = sanitize_textarea_field($data['description']);
+            $format[] = '%s';
+        }
+        if (array_key_exists('source', $data)) {
+            $update_data['source'] = sanitize_text_field($data['source']);
+            $format[] = '%s';
+        }
+        // Ensure source_config is serialized if provided
+        if (array_key_exists('source_config', $data)) {
+            $update_data['source_config'] = maybe_serialize($data['source_config']);
+            $format[] = '%s';
+        }
+        // Update is_active if provided
+        if (array_key_exists('is_active', $data)) {
+            $update_data['is_active'] = (int) $data['is_active'];
+            $format[] = '%d';
+        }
+        if (array_key_exists('source_id', $data)) {
+            $update_data['source_id'] = sanitize_text_field($data['source_id']);
+            $format[] = '%s';
+        }
+        if (array_key_exists('unit', $data)) {
+            $update_data['unit'] = sanitize_text_field($data['unit']);
+            $format[] = '%s';
+        }
+        if (array_key_exists('frequency', $data)) {
+            $update_data['frequency'] = sanitize_text_field($data['frequency']);
+            $format[] = '%s';
+        }
+        // --- END OF FIX ---
+
         $result = $this->wpdb->update(
             $this->indicators_table,
-            array(
-                'name' => sanitize_text_field($data['name']),
-                'slug' => sanitize_key($data['slug']),
-                'description' => sanitize_textarea_field($data['description']),
-                'source' => sanitize_text_field($data['source']),
-                'source_id' => sanitize_text_field($data['source_id']),
-                'unit' => sanitize_text_field($data['unit']),
-                'frequency' => sanitize_text_field($data['frequency']),
-                'updated_at' => current_time('mysql')
-            ),
+            $update_data,
             array('id' => $id),
-            array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'),
+            $format, // Use dynamic format array
             array('%d')
         );
 
@@ -369,12 +487,12 @@ class ZC_DMT_Database {
      */
     public function get_all_calculations() {
         $calculations = $this->wpdb->get_results("SELECT * FROM {$this->calculations_table} ORDER BY name ASC");
-        
+
         // Unserialize dependencies
         foreach ($calculations as &$calculation) {
             $calculation->dependencies = maybe_unserialize($calculation->dependencies);
         }
-        
+
         return $calculations;
     }
 
@@ -385,11 +503,11 @@ class ZC_DMT_Database {
         $calculation = $this->wpdb->get_row(
             $this->wpdb->prepare("SELECT * FROM {$this->calculations_table} WHERE id = %d", $id)
         );
-        
+
         if ($calculation) {
             $calculation->dependencies = maybe_unserialize($calculation->dependencies);
         }
-        
+
         return $calculation;
     }
 
@@ -400,11 +518,11 @@ class ZC_DMT_Database {
         $calculation = $this->wpdb->get_row(
             $this->wpdb->prepare("SELECT * FROM {$this->calculations_table} WHERE slug = %s", $slug)
         );
-        
+
         if ($calculation) {
             $calculation->dependencies = maybe_unserialize($calculation->dependencies);
         }
-        
+
         return $calculation;
     }
 
@@ -672,11 +790,36 @@ class ZC_DMT_Database {
      * Update backup history record
      */
     public function update_backup_history($id, $data) {
+        // Sanitize data for update
+        $update_data = array();
+        $format = array();
+        foreach ($data as $key => $value) {
+            switch ($key) {
+                case 'indicator_id':
+                case 'size':
+                    $update_data[$key] = (int) $value;
+                    $format[] = '%d';
+                    break;
+                case 'status':
+                    // Assuming status is a limited set of strings, sanitize as key
+                    $update_data[$key] = sanitize_key($value);
+                    $format[] = '%s';
+                    break;
+                default:
+                    // For strings like file_path, drive_file_id, created_at, completed_at
+                    $update_data[$key] = sanitize_text_field($value);
+                    $format[] = '%s';
+                    break;
+            }
+        }
+        $update_data['updated_at'] = current_time('mysql');
+        $format[] = '%s';
+
         $result = $this->wpdb->update(
             $this->backup_history_table,
-            $data,
+            $update_data,
             array('id' => $id),
-            array('%s', '%s', '%s', '%d', '%s'),
+            $format, // Use dynamic format array
             array('%d')
         );
 
@@ -687,12 +830,13 @@ class ZC_DMT_Database {
         return true;
     }
 
+
     /**
      * Get backup history
      */
     public function get_backup_history($indicator_id = null, $limit = 50) {
         $sql = "SELECT bh.*, i.name as indicator_name FROM {$this->backup_history_table} bh";
-        
+
         if ($indicator_id) {
             $sql .= " WHERE bh.indicator_id = %d";
             $params = array($indicator_id);
@@ -700,7 +844,7 @@ class ZC_DMT_Database {
             $sql .= " LEFT JOIN {$this->indicators_table} i ON bh.indicator_id = i.id";
             $params = array();
         }
-        
+
         $sql .= " ORDER BY bh.created_at DESC LIMIT %d";
         $params[] = $limit;
 
