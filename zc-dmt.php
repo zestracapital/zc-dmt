@@ -371,7 +371,7 @@ class ZC_DMT {
 		// --- Action pages need to be registered as submenu items to be accessible ---
         // These are the pages accessed via links/buttons like edit-source.php
         // We register them as invisible submenu items so WordPress knows they are valid.
-        // BUT NOW WE PROVIDE A CALLBACK FUNCTION TO LOAD THE CORRECT FILE.
+        // AND PROVIDE A CALLBACK FUNCTION TO LOAD THE CORRECT FILE.
         add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-add-source', array($this, 'load_add_source_page'));
         add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-edit-source', array($this, 'load_edit_source_page'));
         add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-delete-source', array($this, 'load_delete_source_page'));
@@ -379,7 +379,8 @@ class ZC_DMT {
         add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-add-indicator', array($this, 'load_add_indicator_page'));
         add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-edit-indicator', array($this, 'load_edit_indicator_page'));
         add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-delete-indicator', array($this, 'load_delete_indicator_page'));
-        // Add others as needed
+        // --- Add the Test Connection page registration ---
+        add_submenu_page('zc-dmt-dashboard', '', '', 'manage_options', 'zc-dmt-test-connection', array($this, 'load_test_connection_page'));
         // --- End of action page registrations ---
     }
 	
@@ -411,7 +412,24 @@ class ZC_DMT {
 	public function load_delete_indicator_page() {
 		require_once ZC_DMT_PLUGIN_DIR . 'admin/delete-indicator.php';
 	}
-	// --- End of callback methods ---
+    // --- Add the callback method for Test Connection ---
+    /**
+     * Callback to load the Test Connection page.
+     */
+    public function load_test_connection_page() {
+        // Check user capabilities again, although submenu does this too.
+        if (!current_user_can('manage_options')) {
+            wp_die(__('You do not have sufficient permissions to access this page.', 'zc-dmt'));
+        }
+        // Make sure this file exists in your admin directory
+        if (file_exists(ZC_DMT_PLUGIN_DIR . 'admin/test-connection.php')) {
+             require_once ZC_DMT_PLUGIN_DIR . 'admin/test-connection.php';
+        } else {
+            wp_die(__('The Test Connection page file could not be found.', 'zc-dmt'));
+        }
+       
+    }
+    // --- End of callback methods ---
 
     public function dashboard_page() {
         require_once ZC_DMT_PLUGIN_DIR . 'admin/dashboard.php';
@@ -470,7 +488,8 @@ class ZC_DMT {
             'zc-dmt-delete-source', // Added delete-source
 			'zc-dmt-add-indicator',
 			'zc-dmt-edit-indicator',
-			'zc-dmt-delete-indicator'
+			'zc-dmt-delete-indicator',
+            'zc-dmt-test-connection' // Added test-connection
             // Add other specific pages if they need JS/CSS
         );
 
